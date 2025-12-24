@@ -109,8 +109,8 @@ namespace NetworkingMarchingCubes {
 
         [TargetRpc(bufferLast: true)]
         private void SendToNewObserver(PlayerID target, Vector3Int chunkCoord) {
-            Debug.Log($"[Client] Initializing chunk at {BaseChunk?.ChunkCoord}");
-
+            // Lets error handle properly. If you're following this example then it should fit into the PurrNet
+            // lifecycle properly. However, if you're not and doing your own thing it's important to make sure it exists!
             if (BaseChunk == null) {
                 Debug.LogError("[Client] BaseChunk is null. Please ensure BaseChunk is created.", this);
 
@@ -118,6 +118,9 @@ namespace NetworkingMarchingCubes {
             }
             
             BaseChunk.SetCoordAndFields(chunkCoord);
+            
+            Debug.Log($"[Client] Initializing chunk at {BaseChunk?.ChunkCoord}");
+            
             InitializeChunk();
         }
 

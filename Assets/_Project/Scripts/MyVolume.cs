@@ -60,6 +60,8 @@ namespace NetworkingMarchingCubes {
         }
 
         protected override void OnSpawned() {
+            BaseVolume.RegisterVolume();
+            
             if (!isServer)
                 return;
             
@@ -67,7 +69,6 @@ namespace NetworkingMarchingCubes {
         }
 
         public virtual void InitializeVolume() {
-            BaseVolume.RegisterVolume();
             StartCoroutine(InitializeChunks());
         }
 
