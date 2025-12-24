@@ -4,48 +4,64 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using PurrNet;
-using PurrNet.Transports;
 using Spellbound.Core.Packing;
 using Spellbound.MarchingCubes;
-using UnityEngine;
 
 namespace NetworkingMarchingCubes {
     /// <summary>
-    /// NetworkModule responsible for synchronizing voxel edits across the network.
+    /// NetworkModule responsible for synchronizing batched voxel edits across the network.
     /// </summary>
     [Serializable]
     public class VoxelSyncModule : NetworkModule {
         private readonly Dictionary<int, VoxelEdit> _voxelEdits = new();
         
         /// <summary>
-        /// Invoked when edits should be applied locally.
-        /// TestChunk subscribes to this and calls BaseChunk.ApplyVoxelEdits.
+        /// An event that is invoked when voxels are changed from a terraform event.
         /// </summary>
         public event Action<List<VoxelEdit>> onVoxelsChanged;
 
+        /// <summary>
+        /// Constructor for this Module.
+        /// </summary>
         public VoxelSyncModule() {
-            Debug.Log("VoxelSyncModule constructor is running");
             if (!isServer)
                 return;
             
+            // We intend for the server to act as the scribe. Reason being: if someone dc's and reconnects they should
+            // be able to get any data they need/require from the server.
             onVoxelsChanged += HandleScribeVoxelEdits;
-
         }
 
+        /// <summary>
+        /// Built in PurrNet override - we chose to unsubscribe here.
+        /// </summary>
         public override void OnPoolReset() {
             base.OnPoolReset();
             onVoxelsChanged -= HandleScribeVoxelEdits;
         } 
 
+        /// <summary>
+        /// The actual recording of voxel edits.
+        /// Recall that only the server is subscribing this method to the onVoxelChanged event.
+        /// </summary>
         private void HandleScribeVoxelEdits(List<VoxelEdit> newEdits) {
-            foreach (var edit in newEdits) {
+            foreach (var edit in newEdits)
                 _voxelEdits[edit.index] = edit;
-            }
         }
 
         /// <summary>
-        /// Called by TestChunk.PassVoxelEdits to route edits through the network.
+        /// Any time a terraform event occurs that changes the mesh a ProcessEdits is called with said edits.
         /// </summary>
+        /// <remarks>
+        /// This is the bread and butter of this module. Users should note that we have effectively given owners the
+        /// ability to edit without latency. This should enable your gameplay to appear uninterrupted to players if and
+        /// when they own their own chunk. Otherwise, the server owns it and the edits are server authoritative.
+        /// If you're struggling with this concept - just imagine that your friend from across the world joins your game
+        /// with you as the host, and they run off by themselves in your game world. If they are truly by
+        /// themselves then they should be able to play lag free and simply relay their change events back to the server.
+        /// The server will simply record their edits so that if they disconnect and rejoin - they come back to the
+        /// edits they've made.
+        /// </remarks>
         public void ProcessEdits(List<VoxelEdit> edits) {
             var packed = Packer.PackListToBytes(edits);
 
@@ -57,18 +73,33 @@ namespace NetworkingMarchingCubes {
                 HandleClientTryChangeSRPC(packed);
         }
 
+        /// <summary>
+        /// PurrNet callback that is triggered anytime an observer is added to the NetworkIdentity.
+        /// </summary>
         public override void OnObserverAdded(PlayerID player) {
             base.OnObserverAdded(player);
+            
             var packed = Packer.PackListToBytes(_voxelEdits.Values.ToList());
             HandleInitialStateTRPC(player, packed);
         }
 
+        /// <summary>
+        /// Any client observing the chunk should receive the edits so that they can trigger their marching event.
+        /// </summary>
         [ObserversRpc(excludeOwner: true)]
-        private void HandleStateChangeORPC(byte[] batchedOfPackedEdits) {
-            var edits = Packer.UnpackListFromBytes<VoxelEdit>(batchedOfPackedEdits);
+        private void HandleStateChangeORPC(byte[] batchedPackedEdits) {
+            var edits = Packer.UnpackListFromBytes<VoxelEdit>(batchedPackedEdits);
             onVoxelsChanged?.Invoke(edits);
         }
 
+        /// <summary>
+        /// Any client that is newly observing a chunk should receive its current edits.
+        /// </summary>
+        /// <remarks>
+        /// Imagine you're far away from your friend, and you're not observing the chunk that they are in. Now imagine
+        /// they perform some terraform events... this method is responsible for communicating back to you all of those
+        /// changes once you get close enough to their chunk and begin observing it.
+        /// </remarks>
         [TargetRpc]
         private void HandleInitialStateTRPC(PlayerID player, byte[] allEditsPacked) {
             var edits = Packer.UnpackListFromBytes<VoxelEdit>(allEditsPacked);
@@ -97,50 +128,5 @@ namespace NetworkingMarchingCubes {
             foreach (var edit in edits)
                 _voxelEdits[edit.index] = edit;
         }
-
-        /// <summary>
-        /// Owner/Server broadcasts edits to all observers.
-        /// bufferLast ensures late joiners get the most recent state.
-        /// runLocally: false because the caller already applied locally.
-        /// </summary>
-        [ObserversRpc(bufferLast: true, runLocally: false)]
-        private void BroadcastEdits(byte[] packedEdits) {
-            var edits = Packer.UnpackListFromBytes<VoxelEdit>(packedEdits);
-            ApplyLocally(edits);
-        }
-
-        private void ApplyLocally(List<VoxelEdit> edits) {
-            foreach (var edit in edits)
-                _voxelEdits[edit.index] = edit;
-
-            onVoxelsChanged?.Invoke(edits);
-        }
-        
-        #region State Sync for New Observers
-
-        /// <summary>
-        /// Get packed edit state for sending to new observers.
-        /// Called by TestChunk.OnObserverAdded.
-        /// </summary>
-        public byte[] GetPackedEditState() {
-            var edits = new List<VoxelEdit>(_voxelEdits.Values);
-            return edits.Count > 0
-                    ? Packer.PackListToBytes(edits) 
-                    : null;
-        }
-
-        /// <summary>
-        /// Apply full edit state from server.
-        /// Called after InitializeChunk to catch up new observers.
-        /// </summary>
-        public void ApplyFullEditState(byte[] packedEdits) {
-            if (packedEdits == null || packedEdits.Length == 0)
-                return;
-
-            var edits = Packer.UnpackListFromBytes<VoxelEdit>(packedEdits);
-            ApplyLocally(edits);
-        }
-
-        #endregion
     }
 }

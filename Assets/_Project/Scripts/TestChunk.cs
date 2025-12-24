@@ -2,7 +2,6 @@
 
 using System.Collections.Generic;
 using PurrNet;
-using PurrNet.Transports;
 using Spellbound.MarchingCubes;
 using Unity.Collections;
 using UnityEngine;
