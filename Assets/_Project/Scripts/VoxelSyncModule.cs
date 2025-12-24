@@ -67,10 +67,10 @@ namespace NetworkingMarchingCubes {
 
             if (isOwner || isServer) {
                 onVoxelsChanged?.Invoke(edits);
-                HandleStateChangeORPC(packed);
+                HandleStateChangeToObservers(packed);
             }
             else
-                HandleClientTryChangeSRPC(packed);
+                HandleClientTryChangeToServer(packed);
         }
 
         /// <summary>
@@ -80,14 +80,14 @@ namespace NetworkingMarchingCubes {
             base.OnObserverAdded(player);
             
             var packed = Packer.PackListToBytes(_voxelEdits.Values.ToList());
-            HandleInitialStateTRPC(player, packed);
+            HandleInitialStateToTarget(player, packed);
         }
 
         /// <summary>
         /// Any client observing the chunk should receive the edits so that they can trigger their marching event.
         /// </summary>
         [ObserversRpc(excludeOwner: true)]
-        private void HandleStateChangeORPC(byte[] batchedPackedEdits) {
+        private void HandleStateChangeToObservers(byte[] batchedPackedEdits) {
             var edits = Packer.UnpackListFromBytes<VoxelEdit>(batchedPackedEdits);
             onVoxelsChanged?.Invoke(edits);
         }
@@ -101,7 +101,7 @@ namespace NetworkingMarchingCubes {
         /// changes once you get close enough to their chunk and begin observing it.
         /// </remarks>
         [TargetRpc]
-        private void HandleInitialStateTRPC(PlayerID player, byte[] allEditsPacked) {
+        private void HandleInitialStateToTarget(PlayerID player, byte[] allEditsPacked) {
             var edits = Packer.UnpackListFromBytes<VoxelEdit>(allEditsPacked);
             onVoxelsChanged?.Invoke(edits);
         }
@@ -112,21 +112,10 @@ namespace NetworkingMarchingCubes {
         /// Routes the request through the server/owner.
         /// </summary>
         [ServerRpc(requireOwnership: false)]
-        public void HandleClientTryChangeSRPC(byte[] packedEdits, RPCInfo info = default) {
+        public void HandleClientTryChangeToServer(byte[] packedEdits, RPCInfo info = default) {
             var edits = Packer.UnpackListFromBytes<VoxelEdit>(packedEdits);
             onVoxelsChanged?.Invoke(edits);
-            HandleStateChangeORPC(packedEdits);
-        }
-        
-        /// <summary>
-        /// Owner syncs edits to server for persistence.
-        /// Server stores but doesn't broadcast.
-        /// </summary>
-        [ServerRpc(requireOwnership: false)]
-        private void SyncEditsToServer(byte[] packedEdits) {
-            var edits = Packer.UnpackListFromBytes<VoxelEdit>(packedEdits);
-            foreach (var edit in edits)
-                _voxelEdits[edit.index] = edit;
+            HandleStateChangeToObservers(packedEdits);
         }
     }
 }
