@@ -98,7 +98,7 @@ namespace NetworkingMarchingCubes {
 
         #endregion
 
-        #region IChunk implementation
+        #region IChunk Implementation
 
         public void InitializeChunk(NativeArray<VoxelData> voxels) => BaseChunk.InitializeVoxels(voxels);
 
