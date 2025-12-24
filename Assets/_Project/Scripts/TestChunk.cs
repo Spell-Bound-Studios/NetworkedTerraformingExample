@@ -109,7 +109,7 @@ namespace NetworkingMarchingCubes {
 
         [TargetRpc(bufferLast: true)]
         private void SendToNewObserver(PlayerID target) {
-            Debug.Log($"[Client] {target.id} is going to initialize chunk.");
+            Debug.Log($"[Client] Initializing chunk at {BaseChunk?.ChunkCoord}");
             InitializeChunk();
         }
 

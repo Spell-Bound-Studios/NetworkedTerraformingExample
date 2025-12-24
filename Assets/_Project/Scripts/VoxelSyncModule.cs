@@ -12,7 +12,7 @@ namespace NetworkingMarchingCubes {
     /// </summary>
     [Serializable]
     public class VoxelSyncModule : NetworkModule {
-        private Dictionary<int, VoxelEdit> _voxelEdits;
+        private readonly Dictionary<int, VoxelEdit> _voxelEdits;
         
         /// <summary>
         /// Invoked when edits should be applied locally.
@@ -29,6 +29,10 @@ namespace NetworkingMarchingCubes {
             if (isOwner || isServer) {
                 ApplyLocally(edits);
                 BroadcastEdits(packed);
+
+                // Owner syncs to server for persistence
+                if (isOwner && !isServer)
+                    SyncEditsToServer(packed);
             }
             else
                 RequestEdits(packed);
@@ -44,6 +48,17 @@ namespace NetworkingMarchingCubes {
             ApplyLocally(edits);
             BroadcastEdits(packedEdits);
         }
+        
+        /// <summary>
+        /// Owner syncs edits to server for persistence.
+        /// Server stores but doesn't broadcast.
+        /// </summary>
+        [ServerRpc(requireOwnership: false)]
+        private void SyncEditsToServer(byte[] packedEdits) {
+            var edits = Packer.UnpackListFromBytes<VoxelEdit>(packedEdits);
+            foreach (var edit in edits)
+                _voxelEdits[edit.index] = edit;
+        }
 
         /// <summary>
         /// Owner/Server broadcasts edits to all observers.
@@ -56,6 +71,38 @@ namespace NetworkingMarchingCubes {
             ApplyLocally(edits);
         }
 
-        private void ApplyLocally(List<VoxelEdit> edits) => OnEditsReceived?.Invoke(edits);
+        private void ApplyLocally(List<VoxelEdit> edits) {
+            foreach (var edit in edits)
+                _voxelEdits[edit.index] = edit;
+
+            OnEditsReceived?.Invoke(edits);
+        }
+        
+        #region State Sync for New Observers
+
+        /// <summary>
+        /// Get packed edit state for sending to new observers.
+        /// Called by TestChunk.OnObserverAdded.
+        /// </summary>
+        public byte[] GetPackedEditState() {
+            var edits = new List<VoxelEdit>(_voxelEdits.Values);
+            return edits.Count > 0
+                    ? Packer.PackListToBytes(edits) 
+                    : null;
+        }
+
+        /// <summary>
+        /// Apply full edit state from server.
+        /// Called after InitializeChunk to catch up new observers.
+        /// </summary>
+        public void ApplyFullEditState(byte[] packedEdits) {
+            if (packedEdits == null || packedEdits.Length == 0)
+                return;
+
+            var edits = Packer.UnpackListFromBytes<VoxelEdit>(packedEdits);
+            ApplyLocally(edits);
+        }
+
+        #endregion
     }
 }
