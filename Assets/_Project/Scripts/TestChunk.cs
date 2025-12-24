@@ -37,9 +37,9 @@ namespace NetworkingMarchingCubes {
 
         protected override void OnEarlySpawn() => BaseChunk = new BaseChunk(this, this);
 
-        protected override void OnSpawned() => syncModule.OnEditsReceived += ApplyEditsToBaseChunk;
+        protected override void OnSpawned() => syncModule.onVoxelsChanged += ApplyEditsToBaseChunk;
 
-        protected override void OnDespawned() => syncModule.OnEditsReceived -= ApplyEditsToBaseChunk;
+        protected override void OnDespawned() => syncModule.onVoxelsChanged -= ApplyEditsToBaseChunk;
 
         protected override void OnDestroy() {
             base.OnDestroy();

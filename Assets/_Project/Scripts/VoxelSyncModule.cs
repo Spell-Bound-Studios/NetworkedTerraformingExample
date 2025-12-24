@@ -2,9 +2,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using PurrNet;
+using PurrNet.Transports;
 using Spellbound.Core.Packing;
 using Spellbound.MarchingCubes;
+using Unity.VisualScripting;
+using UnityEngine;
 
 namespace NetworkingMarchingCubes {
     /// <summary>
@@ -12,13 +16,33 @@ namespace NetworkingMarchingCubes {
     /// </summary>
     [Serializable]
     public class VoxelSyncModule : NetworkModule {
-        private readonly Dictionary<int, VoxelEdit> _voxelEdits;
+        private readonly Dictionary<int, VoxelEdit> _voxelEdits = new();
         
         /// <summary>
         /// Invoked when edits should be applied locally.
         /// TestChunk subscribes to this and calls BaseChunk.ApplyVoxelEdits.
         /// </summary>
-        public event Action<List<VoxelEdit>> OnEditsReceived;
+        public event Action<List<VoxelEdit>> onVoxelsChanged;
+
+        public VoxelSyncModule() {
+            Debug.Log("VoxelSyncModule constructor is running");
+            if (!isServer)
+                return;
+            
+            onVoxelsChanged += BookeepVoxelEdits;
+
+        }
+
+        public override void OnPoolReset() {
+            base.OnPoolReset();
+            onVoxelsChanged -= BookeepVoxelEdits;
+        } 
+
+        private void BookeepVoxelEdits(List<VoxelEdit> newEdits) {
+            foreach (var edit in newEdits) {
+                _voxelEdits[edit.index] = edit;
+            }
+        }
 
         /// <summary>
         /// Called by TestChunk.PassVoxelEdits to route edits through the network.
@@ -27,26 +51,41 @@ namespace NetworkingMarchingCubes {
             var packed = Packer.PackListToBytes(edits);
 
             if (isOwner || isServer) {
-                ApplyLocally(edits);
-                BroadcastEdits(packed);
-
-                // Owner syncs to server for persistence
-                if (isOwner && !isServer)
-                    SyncEditsToServer(packed);
+                onVoxelsChanged?.Invoke(edits);
+                HandleStateChangeORPC(packed);
             }
             else
-                RequestEdits(packed);
+                HandleClientTryChangeSRPC(packed);
         }
+
+        public override void OnObserverAdded(PlayerID player) {
+            base.OnObserverAdded(player);
+            var packed = Packer.PackListToBytes(_voxelEdits.Values.ToList());
+            HandleInitialStateTRPC(player, packed);
+        }
+
+        [ObserversRpc(Channel.ReliableOrdered, excludeOwner: true)]
+        private void HandleStateChangeORPC(byte[] batchedOfPackedEdits) {
+            var edits = Packer.UnpackListFromBytes<VoxelEdit>(batchedOfPackedEdits);
+            onVoxelsChanged?.Invoke(edits);
+        }
+
+        [TargetRpc(Channel.ReliableOrdered)]
+        private void HandleInitialStateTRPC(PlayerID player, byte[] allEditsPacked) {
+            var edits = Packer.UnpackListFromBytes<VoxelEdit>(allEditsPacked);
+            onVoxelsChanged?.Invoke(edits);
+        }
+        
 
         /// <summary>
         /// For clients that want to edit a chunk they don't own.
         /// Routes the request through the server/owner.
         /// </summary>
         [ServerRpc(requireOwnership: false)]
-        public void RequestEdits(byte[] packedEdits, RPCInfo info = default) {
+        public void HandleClientTryChangeSRPC(byte[] packedEdits, RPCInfo info = default) {
             var edits = Packer.UnpackListFromBytes<VoxelEdit>(packedEdits);
-            ApplyLocally(edits);
-            BroadcastEdits(packedEdits);
+            onVoxelsChanged?.Invoke(edits);
+            HandleStateChangeORPC(packedEdits);
         }
         
         /// <summary>
@@ -75,7 +114,7 @@ namespace NetworkingMarchingCubes {
             foreach (var edit in edits)
                 _voxelEdits[edit.index] = edit;
 
-            OnEditsReceived?.Invoke(edits);
+            onVoxelsChanged?.Invoke(edits);
         }
         
         #region State Sync for New Observers
