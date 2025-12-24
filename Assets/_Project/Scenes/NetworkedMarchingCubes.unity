@@ -538,7 +538,8 @@ GameObject:
   m_Component:
   - component: {fileID: 963978344}
   - component: {fileID: 963978343}
-  - component: {fileID: 963978342}
+  - component: {fileID: 963978346}
+  - component: {fileID: 963978345}
   m_Layer: 0
   m_Name: NetworkManager
   m_TagString: Untagged
@@ -546,25 +547,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &963978342
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 963978341}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fc64ff707d914a64e95f2ac0bf554c09, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: PurrNet.Runtime::PurrNet.Transports.UDPTransport
-  _automaticCloudSetups:
-    _adaptToEdgegap: 1
-  _serverPort: 5000
-  _maxConnections: 100
-  _address: 127.0.0.1
-  _timeoutInSeconds: 5
-  _pollEventsInUpdate: 0
 --- !u!114 &963978343
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -578,11 +560,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: PurrNet.Runtime::PurrNet.NetworkManager
   _stopPlayingOnDisconnect: 0
-  _startServerFlags: 1
-  _startClientFlags: 1
+  _startServerFlags: 0
+  _startClientFlags: 0
   _cookieScope: 1
   _dontDestroyOnLoad: 1
-  _transport: {fileID: 963978342}
+  _transport: {fileID: 0}
   _networkPrefabs: {fileID: 11400000, guid: 8047d85540db97a48bf757c25b19b391, type: 2}
   _networkAssets: {fileID: 0}
   _networkRules: {fileID: 11400000, guid: 6abc5ff662b58e84a9b1ed84a5a72ccd, type: 2}
@@ -605,6 +587,36 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &963978345
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 963978341}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e5c476fd9733ed148b4631bd99c76108, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PurrNetLobbySetup::PurrLobby.ConnectionStarter
+--- !u!114 &963978346
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 963978341}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 332e746c3c3253246aacad4d5559f1fb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PurrNet.Runtime::PurrNet.Transports.PurrTransport
+  _masterServer: https://purrtransport.purrservers.com/
+  _roomName: 80b88d00f92b46d6abdbcbaa0de3014b
+  _region: nj-us
+  _host: purrtransport-nj-us.purrservers.com
+  _timeoutInSeconds: 5
+  _pollEventsInUpdate: 0
 --- !u!1001 &1019270029
 PrefabInstance:
   m_ObjectHideFlags: 0
