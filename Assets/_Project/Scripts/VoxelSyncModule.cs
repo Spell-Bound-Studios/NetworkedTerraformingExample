@@ -7,7 +7,6 @@ using PurrNet;
 using PurrNet.Transports;
 using Spellbound.Core.Packing;
 using Spellbound.MarchingCubes;
-using Unity.VisualScripting;
 using UnityEngine;
 
 namespace NetworkingMarchingCubes {
@@ -29,16 +28,16 @@ namespace NetworkingMarchingCubes {
             if (!isServer)
                 return;
             
-            onVoxelsChanged += BookeepVoxelEdits;
+            onVoxelsChanged += HandleScribeVoxelEdits;
 
         }
 
         public override void OnPoolReset() {
             base.OnPoolReset();
-            onVoxelsChanged -= BookeepVoxelEdits;
+            onVoxelsChanged -= HandleScribeVoxelEdits;
         } 
 
-        private void BookeepVoxelEdits(List<VoxelEdit> newEdits) {
+        private void HandleScribeVoxelEdits(List<VoxelEdit> newEdits) {
             foreach (var edit in newEdits) {
                 _voxelEdits[edit.index] = edit;
             }
@@ -64,13 +63,13 @@ namespace NetworkingMarchingCubes {
             HandleInitialStateTRPC(player, packed);
         }
 
-        [ObserversRpc(Channel.ReliableOrdered, excludeOwner: true)]
+        [ObserversRpc(excludeOwner: true)]
         private void HandleStateChangeORPC(byte[] batchedOfPackedEdits) {
             var edits = Packer.UnpackListFromBytes<VoxelEdit>(batchedOfPackedEdits);
             onVoxelsChanged?.Invoke(edits);
         }
 
-        [TargetRpc(Channel.ReliableOrdered)]
+        [TargetRpc]
         private void HandleInitialStateTRPC(PlayerID player, byte[] allEditsPacked) {
             var edits = Packer.UnpackListFromBytes<VoxelEdit>(allEditsPacked);
             onVoxelsChanged?.Invoke(edits);
