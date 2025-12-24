@@ -12,6 +12,8 @@ namespace NetworkingMarchingCubes {
     /// </summary>
     [Serializable]
     public class VoxelSyncModule : NetworkModule {
+        private Dictionary<int, VoxelEdit> _voxelEdits;
+        
         /// <summary>
         /// Invoked when edits should be applied locally.
         /// TestChunk subscribes to this and calls BaseChunk.ApplyVoxelEdits.

@@ -53,3 +53,5 @@ MonoBehaviour:
   _directChildren: []
   _networkRules: {fileID: 0}
   _visitiblityRules: {fileID: 0}
+  dataFactory: {fileID: 11400000, guid: 5e86d72b15a421a4188e7102853a987c, type: 2}
+  boundaryOverrides: {fileID: 11400000, guid: a6555e11e01b7124896ba8db32aefeab, type: 2}

@@ -2,6 +2,7 @@
 
 using System.Collections.Generic;
 using PurrNet;
+using PurrNet.Transports;
 using Spellbound.MarchingCubes;
 using Unity.Collections;
 using UnityEngine;
@@ -22,6 +23,12 @@ namespace NetworkingMarchingCubes {
     /// creates lag-free environment regardless of host ping and location.
     /// </summary>
     public class TestChunk : NetworkIdentity, IChunk {
+        [Tooltip("Preset for what voxel data is generated in the volume"), SerializeField]
+        protected DataFactory dataFactory;
+
+        [Tooltip("Rules for immutable voxels on the external faces of the volume"), SerializeField]
+        protected BoundaryOverrides boundaryOverrides;
+        
         [SerializeField] private VoxelSyncModule syncModule = new();
 
         public BaseChunk BaseChunk { get; private set; }
@@ -44,9 +51,13 @@ namespace NetworkingMarchingCubes {
         /// Server-side only.
         /// </summary>
         protected override void OnObserverAdded(PlayerID player) {
-            // If you're not the server get out.
             if (!isServer)
-                return;
+                Debug.Log($"[Client] {player.id} is running in observer added lol bug");
+            
+            if (isServer)
+                Debug.Log($"[Server] {player.id} is running in observer added");
+            
+            SendToNewObserver(player);
 
             // If this chunks observer count is less than or equal to 1 OR doesn't have an owner get out.
             if (observers.Count <= 1 || !hasOwner)
@@ -96,11 +107,35 @@ namespace NetworkingMarchingCubes {
                 Debug.Log($"[Client] I now own chunk {BaseChunk?.ChunkCoord} - lag-free editing enabled!");
         }
 
+        [TargetRpc(bufferLast: true)]
+        private void SendToNewObserver(PlayerID target) {
+            Debug.Log($"[Client] {target.id} is going to initialize chunk.");
+            InitializeChunk();
+        }
+
         #endregion
 
         #region IChunk Implementation
+        
+        public void InitializeChunk(NativeArray<VoxelData> voxels = default) {
+            BaseChunk.ParentVolume.BaseVolume.RegisterChunk(BaseChunk.ChunkCoord, this);
+            
+            if (boundaryOverrides != null) {
+                var overrides = boundaryOverrides.BuildChunkOverrides(
+                    BaseChunk.ChunkCoord, BaseChunk.ParentVolume.ConfigBlob);
+                BaseChunk.SetOverrides(overrides);
+            }
 
-        public void InitializeChunk(NativeArray<VoxelData> voxels) => BaseChunk.InitializeVoxels(voxels);
+            if (voxels == default)
+                voxels = new NativeArray<VoxelData>(
+                    BaseChunk.ParentVolume.ConfigBlob.Value.ChunkDataVolumeSize, Allocator.Persistent);
+            
+            dataFactory.FillDataArray(BaseChunk.ChunkCoord, BaseChunk.ParentVolume.ConfigBlob, voxels);
+            BaseChunk.InitializeVoxels(voxels);
+
+            if (voxels.IsCreated) 
+                voxels.Dispose();
+        }
 
         /// <summary>
         /// Called by MarchingCubesManager.DistributeVoxelEdits.
