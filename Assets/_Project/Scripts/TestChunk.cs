@@ -57,7 +57,7 @@ namespace NetworkingMarchingCubes {
             if (isServer)
                 Debug.Log($"[Server] {player.id} is running in observer added");
             
-            SendToNewObserver(player);
+            SendToNewObserver(player, BaseChunk.ChunkCoord);
 
             // If this chunks observer count is less than or equal to 1 OR doesn't have an owner get out.
             if (observers.Count <= 1 || !hasOwner)
@@ -108,8 +108,16 @@ namespace NetworkingMarchingCubes {
         }
 
         [TargetRpc(bufferLast: true)]
-        private void SendToNewObserver(PlayerID target) {
+        private void SendToNewObserver(PlayerID target, Vector3Int chunkCoord) {
             Debug.Log($"[Client] Initializing chunk at {BaseChunk?.ChunkCoord}");
+
+            if (BaseChunk == null) {
+                Debug.LogError("[Client] BaseChunk is null. Please ensure BaseChunk is created.", this);
+
+                return;
+            }
+            
+            BaseChunk.SetCoordAndFields(chunkCoord);
             InitializeChunk();
         }
 
