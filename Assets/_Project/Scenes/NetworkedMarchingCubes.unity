@@ -810,7 +810,6 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
-  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -1096,31 +1095,31 @@ PrefabInstance:
       objectReference: {fileID: 11400000, guid: a6555e11e01b7124896ba8db32aefeab, type: 2}
     - target: {fileID: 1732448111443529495, guid: 6928b862ff83cef4ea5ec608012efb29, type: 3}
       propertyPath: viewDistanceLodRanges.Array.data[0].y
-      value: 32
+      value: 79.98
       objectReference: {fileID: 0}
     - target: {fileID: 1732448111443529495, guid: 6928b862ff83cef4ea5ec608012efb29, type: 3}
       propertyPath: viewDistanceLodRanges.Array.data[1].x
-      value: 32
+      value: 79.98
       objectReference: {fileID: 0}
     - target: {fileID: 1732448111443529495, guid: 6928b862ff83cef4ea5ec608012efb29, type: 3}
       propertyPath: viewDistanceLodRanges.Array.data[1].y
-      value: 96
+      value: 144.82
       objectReference: {fileID: 0}
     - target: {fileID: 1732448111443529495, guid: 6928b862ff83cef4ea5ec608012efb29, type: 3}
       propertyPath: viewDistanceLodRanges.Array.data[2].x
-      value: 96
+      value: 144.82
       objectReference: {fileID: 0}
     - target: {fileID: 1732448111443529495, guid: 6928b862ff83cef4ea5ec608012efb29, type: 3}
       propertyPath: viewDistanceLodRanges.Array.data[2].y
-      value: 224
+      value: 272.82
       objectReference: {fileID: 0}
     - target: {fileID: 1732448111443529495, guid: 6928b862ff83cef4ea5ec608012efb29, type: 3}
       propertyPath: viewDistanceLodRanges.Array.data[3].x
-      value: 224
+      value: 272.82
       objectReference: {fileID: 0}
     - target: {fileID: 1732448111443529495, guid: 6928b862ff83cef4ea5ec608012efb29, type: 3}
       propertyPath: viewDistanceLodRanges.Array.data[3].y
-      value: 480
+      value: 528.82
       objectReference: {fileID: 0}
     - target: {fileID: 3585596676457186269, guid: 6928b862ff83cef4ea5ec608012efb29, type: 3}
       propertyPath: m_Name
